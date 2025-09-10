@@ -36,17 +36,9 @@ interface FAQItem {
   answer: string
 }
 
-interface FormData {
-  name: string
-  email: string
-  message: string
-}
 
-interface FormErrors {
-  name?: string
-  email?: string
-  message?: string
-}
+
+
 
 // Data
 const features: Feature[] = [
@@ -116,47 +108,13 @@ const whyItems = [
   }
 ]
 
-export default function HomePage() {
-  const [formData, setFormData] = useState<FormData>({ name: '', email: '', message: '' })
-  const [formErrors, setFormErrors] = useState<FormErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
+export default function HomePage() {  
 
-  const validateForm = (): boolean => {
-    const errors: FormErrors = {}
-    
-    if (!formData.name.trim()) errors.name = 'Name is required'
-    if (!formData.email.trim()) errors.email = 'Email is required'
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Email is invalid'
-    if (!formData.message.trim()) errors.message = 'Message is required'
-    
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateForm()) return
-
-    setIsSubmitting(true)
     
-    try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-      
-      if (response.ok) {
-        setIsSubmitted(true)
-        setFormData({ name: '', email: '', message: '' })
-      }
-    } catch (error) {
-      console.error('Form submission error:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+    
+
+  
 
   return (
     <main>
@@ -529,100 +487,7 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      {/* Contact Section */}
-      <motion.section
-        id="contact"
-        className="py-20 lg:py-28 bg-neutral-50"
-        initial="initial"
-        whileInView="animate"
-        viewport={{ once: true, amount: 0.3 }}
-      >
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div variants={fadeUp} className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-4">
-              Get in Touch
-            </h2>
-            <p className="text-lg text-slate-600">
-              Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
-            </p>
-          </motion.div>
-          
-          <motion.div variants={fadeUp}>
-            {isSubmitted ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <div className="text-2xl text-green-600">✓</div>
-                </div>
-                <h3 className="text-xl font-semibold text-neutral-900 mb-2">Message Sent!</h3>
-                <p className="text-slate-600">Thank you for contacting us. We'll get back to you soon.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md p-8">
-                <div className="grid sm:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-2">
-                      Name *
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-600 outline-none transition-colors ${
-                        formErrors.name ? 'border-red-300' : 'border-neutral-200'
-                      }`}
-                      placeholder="Your name"
-                    />
-                    {formErrors.name && <p className="text-red-600 text-sm mt-1">{formErrors.name}</p>}
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-600 outline-none transition-colors ${
-                        formErrors.email ? 'border-red-300' : 'border-neutral-200'
-                      }`}
-                      placeholder="your@email.com"
-                    />
-                    {formErrors.email && <p className="text-red-600 text-sm mt-1">{formErrors.email}</p>}
-                  </div>
-                </div>
-                
-                <div className="mb-6">
-                  <label htmlFor="message" className="block text-sm font-medium text-neutral-700 mb-2">
-                    Message *
-                  </label>
-                  <textarea
-                    id="message"
-                    rows={5}
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-600 outline-none resize-none transition-colors ${
-                      formErrors.message ? 'border-red-300' : 'border-neutral-200'
-                    }`}
-                    placeholder="Tell us about your project or question..."
-                  ></textarea>
-                  {formErrors.message && <p className="text-red-600 text-sm mt-1">{formErrors.message}</p>}
-                </div>
-                
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-6 rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300"
-                >
-                  {isSubmitting ? 'Sending...' : 'Send Message'}
-                </button>
-              </form>
-            )}
-          </motion.div>
-        </div>
-      </motion.section>
+     
     </main>
   )
 }

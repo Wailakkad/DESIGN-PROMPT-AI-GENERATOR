@@ -11,28 +11,40 @@ function extractJSON(text: string) {
   try { return JSON.parse(m[0]); } catch { return null; }
 }
 
-// Build task with POD-specific constraints to avoid mockups
-function buildTask(audience: string) {
-  const isPOD =
-    /(^|\s)pod($|\s)/i.test(audience) ||
-    /print[-\s]?on[-\s]?demand/i.test(audience);
+// Build enhanced task for POD designs with template generation
+function buildTask() {
+  return (
+    "TASK: Create one single highly-optimized, professional design prompt for generative design tools (Midjourney, SDXL, DALL·E). " +
 
-  const base =
-    "Create one highly optimized creative design prompt for generative design tools (Midjourney, SDXL, DALL·E, Figma/Framer). " +
-    "Be specific and visual: subject, style, composition, color palette, lighting, mood, materials, camera/format or vector style, aspect if relevant. " +
-    "Add useful art/era/technique refs. Optionally finish with a short 'avoid: …' clause. Keep under 1200 characters. Echo the audience exactly.";
+    // Core Description
+    "1. SUBJECT: Provide an ultra-specific and visually rich description of [SUBJECT]. Focus on fine details, unique attributes, and key defining features. " +
+    "2. STYLE: Specify artistic style, movement, or school (e.g. Bauhaus, Surrealism, Ukiyo-e, Cyberpunk). Include references to famous artists or design techniques if appropriate. " +
+    "3. COMPOSITION: Give precise layout instructions (symmetry, balance, focal point, perspective, background treatment). " +
+    "4. COLOR: Define a deliberate color palette with exact hues (e.g. 'deep ultramarine blue', 'soft pastel peach'). " +
+    "5. LIGHTING: Describe lighting setup (cinematic, natural, neon glow, chiaroscuro, backlit, golden hour). " +
+    "6. MOOD: Convey emotional tone (e.g. calm, vibrant, nostalgic, futuristic). " +
+    "7. MATERIAL/TEXTURE: Add tactile qualities (smooth metallic, rough canvas, glossy ceramic). " +
+    "8. CAMERA/FORMAT: If relevant, specify angle, lens type, or vector-style (e.g. 'flat vector graphic, clean outlines'). " +
+    "9. DIMENSIONS: If aspect ratio applies, include it (e.g. 1:1, 4:5, 16:9). " +
 
-  if (!isPOD) return base;
+    // Print-on-Demand rules
+    "MANDATORY for Print-on-Demand: The output must be a DESIGN-ONLY artwork prompt, never a mockup. " +
+    "Required details: isolated graphic design, perfectly centered composition, transparent background, no environmental context, " +
+    "no shadows, no reflections, print-ready vector or high-resolution format. " +
+    "Technical Specs: 4500x5400px, PNG 300 DPI or vector SVG. " +
 
-  // POD-only additions to prevent T-shirt mockups
-  const podExtra =
-    " IMPORTANT for Print-on-Demand: Generate a DESIGN-ONLY prompt (standalone artwork), not a product photo or mockup. " +
-    "Must specify: 'isolated graphic, centered composition, transparent background (no scene, no shadows), print-ready'. " +
-    "Hard negatives: no t-shirt, no clothing, no apparel, no model, no person, no hands, no mannequin, no hanger, no tag, no label, no wrinkles, no studio, no room, no flatlay, no mockup. " +
-    "If dimensions needed, suggest 4500x5400 px, PNG 300 DPI (or vector/SVG).";
+    // Negatives
+    "Hard NEGATIVES: Never include t-shirt, hoodie, clothing, apparel, model, person, body parts, hands, mannequin, hanger, tag, label, wrinkles, studio, room, flatlay, mockup, or any physical product context. " +
 
-  return base + " " + podExtra;
+    // Length
+    "Keep the full prompt under 1400 characters for optimal model performance. " +
+
+    // Reusable Template
+    "ALSO OUTPUT a REUSABLE TEMPLATE version with placeholders: [SUBJECT], [STYLE], [COLOR_PALETTE], [MOOD], [LIGHTING], [MATERIAL], [COMPOSITION]. " +
+    "Make placeholders intuitive, clearly labeled, and easy for non-designers to customize while preserving structure and quality."
+  );
 }
+
 
 export async function POST(req: Request) {
   try {
@@ -54,9 +66,10 @@ export async function POST(req: Request) {
       additionalProperties: false,
       properties: {
         audience: { type: "string", description: "Echo the provided audience exactly." },
-        prompt: { type: "string", description: "The final optimized design prompt." }
+        prompt: { type: "string", description: "The final optimized design prompt." },
+        template: { type: "string", description: "A reusable template version with placeholders for customization." }
       },
-      required: ["audience", "prompt"]
+      required: ["audience", "prompt", "template"]
     };
 
     const headers = {
@@ -66,7 +79,7 @@ export async function POST(req: Request) {
       "X-Title": "Design Prompt Generator"
     };
 
-    const task = buildTask(audience);
+    const task = buildTask();
 
     // 1) Try tools (if supported)
     const toolsRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -75,7 +88,17 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: "You are an expert at crafting professional design prompts. Return results ONLY via the provided function tool. No explanations." },
+          {
+  role: "system",
+  content: "You are an expert in professional design prompt engineering. \
+Always return outputs ONLY through the provided function tool, never in plain text. \
+Your job is to transform tasks into highly optimized creative prompts for generative design AI tools. \
+The result must be JSON with two keys: \
+- 'final_prompt': the optimized design prompt (ready-to-use, standalone, polished, <1600 chars). \
+- 'template_prompt': a structured reusable version with placeholders. \
+Do not explain, do not add commentary. Always respect all mandatory rules, negatives, and technical specifications."
+}
+,
           { role: "user", content: task },
           { role: "user", content: JSON.stringify({ audience, inputs }) }
         ],
@@ -84,7 +107,7 @@ export async function POST(req: Request) {
             type: "function",
             function: {
               name: "emit_prompt",
-              description: "Return the final optimized design prompt as JSON.",
+              description: "Return the final optimized design prompt and template as JSON.",
               parameters: schema
             }
           }
@@ -92,7 +115,7 @@ export async function POST(req: Request) {
         tool_choice: { type: "function", function: { name: "emit_prompt" } },
         temperature: 0.35,
         top_p: 0.9,
-        max_tokens: 700
+        max_tokens: 900
       })
     });
 
@@ -106,14 +129,22 @@ export async function POST(req: Request) {
       const toolCall = toolsJson?.choices?.[0]?.message?.tool_calls?.[0];
       if (toolCall?.function?.name === "emit_prompt") {
         const args = JSON.parse(toolCall.function.arguments || "{}");
-        if (args?.audience && args?.prompt) {
-          return NextResponse.json({ audience: String(args.audience), prompt: String(args.prompt) });
+        if (args?.audience && args?.prompt && args?.template) {
+          return NextResponse.json({ 
+            audience: String(args.audience), 
+            prompt: String(args.prompt),
+            template: String(args.template)
+          });
         }
       }
       const raw = toolsJson?.choices?.[0]?.message?.content ?? "";
       const parsed = typeof raw === "string" ? extractJSON(raw) : null;
-      if (parsed?.audience && parsed?.prompt) {
-        return NextResponse.json({ audience: String(parsed.audience), prompt: String(parsed.prompt) });
+      if (parsed?.audience && parsed?.prompt && parsed?.template) {
+        return NextResponse.json({ 
+          audience: String(parsed.audience), 
+          prompt: String(parsed.prompt),
+          template: String(parsed.template)
+        });
       }
     }
 
@@ -134,13 +165,13 @@ export async function POST(req: Request) {
             content:
               "Schema: " + JSON.stringify(schema) +
               "\nContext: " + JSON.stringify({ audience, inputs }) +
-              `\nReturn exactly: {"audience":"${audience}","prompt":"..."}`
+              `\nReturn exactly: {"audience":"${audience}","prompt":"...","template":"..."}`
           }
         ],
         response_format: { type: "json_object" },
         temperature: 0.3,
         top_p: 0.9,
-        max_tokens: 700,
+        max_tokens: 900,
         stop: ["```"]
       })
     });
@@ -149,8 +180,12 @@ export async function POST(req: Request) {
     const raw2 = data2?.choices?.[0]?.message?.content ?? "";
     const parsed2 = typeof raw2 === "string" ? extractJSON(raw2) : null;
 
-    if (parsed2?.audience && parsed2?.prompt) {
-      return NextResponse.json({ audience: String(parsed2.audience), prompt: String(parsed2.prompt) });
+    if (parsed2?.audience && parsed2?.prompt && parsed2?.template) {
+      return NextResponse.json({ 
+        audience: String(parsed2.audience), 
+        prompt: String(parsed2.prompt),
+        template: String(parsed2.template)
+      });
     }
 
     return NextResponse.json(

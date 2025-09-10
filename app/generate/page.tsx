@@ -10,6 +10,7 @@ import Image from "next/image";
 
 export default function GeneratePage() {
   const [result, setResult] = useState("");
+  const [TEMPLATE , setTemplate] = useState("");
 
   const scrollToGenerator = () => {
     document.getElementById('generator-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -18,7 +19,7 @@ export default function GeneratePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative min-h-[80vh] flex flex-col justify-center items-center px-4 overflow-hidden">
+      <section className="relative min-h-[100vh] flex flex-col justify-center items-center px-4 overflow-hidden">
         {/* Multi-color glow gradient at bottom */}
         <div className="absolute inset-x-0 bottom-0 h-64 bg-[radial-gradient(ellipse_at_bottom_left,rgba(255,120,180,0.35),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.30),transparent_50%),radial-gradient(ellipse_at_bottom,rgba(167,139,250,0.30),transparent_60%),radial-gradient(ellipse_at_bottom_center,rgba(16,185,129,0.25),transparent_50%),radial-gradient(ellipse_at_bottom,rgba(253,224,71,0.30),transparent_70%)]" />
         
@@ -72,12 +73,12 @@ export default function GeneratePage() {
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
             {/* Form Card */}
             <div className="order-2 lg:order-1">
-              <PromptForm setResult={setResult} />
+              <PromptForm setResult={setResult}  setTemplate={setTemplate} />
             </div>
             
             {/* Result Card */}
             <div className="order-1 lg:order-2 lg:sticky lg:top-8">
-              <PromptResult result={result} />
+              <PromptResult result={result} template={TEMPLATE} />
             </div>
           </div>
         </div>

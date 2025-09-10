@@ -3,9 +3,11 @@ import React, { useState } from "react";
 
 type PromptResultProps = {
   result: string;
+  template?: string;
 };
+ ;
 
-export const PromptResult: React.FC<PromptResultProps> = ({ result }) => {
+export const PromptResult: React.FC<PromptResultProps> = ({ result , template }) => {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = async () => {
@@ -96,6 +98,19 @@ export const PromptResult: React.FC<PromptResultProps> = ({ result }) => {
           </button>
         </div>
       </div>
+      {/* Optional Template Section */}
+      {template && (
+      <div className="p-6 border-t border-neutral-100 bg-neutral-50">
+        <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+          Prompt Template
+        </h3>
+        <div className="bg-white border border-neutral-200 rounded-lg p-4 max-h-72 overflow-y-auto">
+          <pre className="whitespace-pre-wrap text-sm text-neutral-800 font-mono leading-relaxed">
+            {template}
+          </pre>
+        </div>
+      </div>
+      )}
     </div>
   );
 };
